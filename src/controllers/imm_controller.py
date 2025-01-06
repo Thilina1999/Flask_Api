@@ -3,6 +3,9 @@ import uuid
 
 from ... import db
 from ..models.imm_model import InventoryManagementMaster
+from ..models.imm_model import BaseStock
+from flask import request, jsonify
+
 
 # ----------------------------------------------- #
 
@@ -16,7 +19,12 @@ def list_all_inventory_controller():
     for inventory in inventories: response.append(inventory.to_dict())
     return jsonify(response)
 
-from flask import request, jsonify
+def list_all_stock_controller():
+    baseStocks = BaseStock.query.all()
+    response = []
+    for baseStock in baseStocks: response.append(baseStock.to_dict())
+    return jsonify(response)
+
 
 def create_inventory_management_master():
     # Parse JSON data from the request body
