@@ -3,7 +3,10 @@ import uuid
 from datetime import datetime
 from ... import db
 from ..models.ims_model import InventoryHistory
-from flask import request, jsonify
+import pandas as pd
+import numpy as np
+import csv
+import sys
 
 def list_all_history_controller():
     inventoryHistories = InventoryHistory.query.all()
@@ -67,3 +70,71 @@ def create_inventory_history():
 
     # Return response
     return jsonify(new_inventory_history.to_dict()), 201  # 201 Created
+
+def insert_data():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in the request'}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({'error': 'No file selected for uploading'}), 400
+    
+    try:
+        # Read the Excel file into a Pandas DataFrame
+        df = pd.read_excel(file)
+
+        # Drop duplicate rows to get distinct data
+        distinct_data = df.drop_duplicates()
+
+        # Check if required columns exist in the Excel file
+        required_columns = [
+            'assy_part_number', 'subassy_product_number', 'manufacturer', 
+            'shipping_classification', 'airtightness_inspection', 'scu', 
+            'water_vapor_test', 'characteristic_inspection', 
+            'char_inspection_fractional_items', 'accessor', 'fa', 
+            'fa_fractional_items', 'visual_inspection', 'update_date_time'
+        ]
+
+        if not all(col in distinct_data.columns for col in required_columns):
+            return jsonify({'error': 'Missing required columns in the Excel file'}), 400
+
+        # Process date column
+        distinct_data['update_date_time'] = pd.to_datetime(distinct_data['update_date_time'], errors='coerce')
+
+        # Handle invalid dates
+        if distinct_data['update_date_time'].isnull().any():
+            return jsonify({'error': 'Invalid date format in update_date_time column'}), 400
+
+        # Insert data row by row into the database
+        records = []
+        for _, row in distinct_data.iterrows():
+            record = InventoryHistory(
+                assy_part_number=row['assy_part_number'],
+                subassy_product_number=row['subassy_product_number'],
+                manufacturer=row['manufacturer'],
+                shipping_classification=row['shipping_classification'],
+                airtightness_inspection=row['airtightness_inspection'],
+                scu=row['scu'],
+                water_vapor_test=row['water_vapor_test'],
+                characteristic_inspection=row['characteristic_inspection'],
+                char_inspection_fractional_items=row['char_inspection_fractional_items'],
+                accessor=row['accessor'],
+                fa=row['fa'],
+                fa_fractional_items=row['fa_fractional_items'],
+                visual_inspection=row['visual_inspection'],
+                update_date_time=row['update_date_time']
+            )
+            records.append(record)
+
+        # Add all records in one bulk transaction
+        db.session.bulk_save_objects(records)
+        db.session.commit()
+
+        return jsonify({'message': 'Data inserted successfully!'}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
