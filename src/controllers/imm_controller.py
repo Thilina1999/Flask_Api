@@ -6,6 +6,10 @@ from ... import db
 from ..models.imm_model import InventoryManagementMaster
 from ..models.imm_model import BaseStock
 from flask import request, jsonify
+import pandas as pd
+import numpy as np
+import csv
+import sys
 
 
 # ----------------------------------------------- #
@@ -95,3 +99,62 @@ def create_base_stock():
 
     # Return response
     return jsonify(new_base_stock.to_dict()), 201  # 201 Created
+
+def insert_data_ims():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in the request'}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({'error': 'No file selected for uploading'}), 400
+
+    try:
+        # Read the Excel file into a Pandas DataFrame
+        df = pd.read_excel(file)
+
+        # Drop duplicate rows to get distinct data
+        distinct_data = df.drop_duplicates()
+
+        # Check if required columns exist in the Excel file
+        required_columns = [
+            'FacilityGroupID', 'EquipmentNumber', 'FacilityGroupName',
+            'InventoryManagementGroupID', 'InventoryManagementGroupName',
+            'StandardInventoryDays', 'StandardInventoryControlRange'
+        ]
+
+        if not all(col in distinct_data.columns for col in required_columns):
+            return jsonify({'error': 'Missing required columns in the Excel file'}), 400
+
+        # Convert numeric fields and handle errors
+        numeric_columns = ['StandardInventoryDays', 'StandardInventoryControlRange']
+        for col in numeric_columns:
+            distinct_data[col] = pd.to_numeric(distinct_data[col], errors='coerce')
+
+        # Check for invalid numeric values
+        if distinct_data[numeric_columns].isnull().any().any():
+            return jsonify({'error': 'Invalid numeric format in numeric columns'}), 400
+
+        # Insert data row by row into the database
+        records = []
+        for _, row in distinct_data.iterrows():
+            record = InventoryManagementMaster(
+                FacilityGroupID=row['FacilityGroupID'],
+                EquipmentNumber=row['EquipmentNumber'],
+                FacilityGroupName=row['FacilityGroupName'],
+                InventoryManagementGroupID=row['InventoryManagementGroupID'],
+                InventoryManagementGroupName=row['InventoryManagementGroupName'],
+                StandardInventoryDays=row['StandardInventoryDays'],
+                StandardInventoryControlRange=row['StandardInventoryControlRange']
+            )
+            records.append(record)
+
+        # Add all records in one bulk transaction
+        db.session.bulk_save_objects(records)
+        db.session.commit()
+
+        return jsonify({'message': 'Data inserted successfully!'}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
