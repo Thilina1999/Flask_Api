@@ -158,3 +158,29 @@ def insert_data_ims():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+def delete_master_items():
+    try:
+        data = request.get_json()
+        ids_to_delete = data.get("ids", [])
+
+        if not ids_to_delete:
+            return jsonify({"message": "No IDs provided"}), 400
+
+        # Delete related records in BaseStock first
+        db.session.query(BaseStock).filter(
+            BaseStock.InventoryManagementId.in_(ids_to_delete)
+        ).delete(synchronize_session=False)
+
+        # Now delete from InventoryManagementMaster
+        db.session.query(InventoryManagementMaster).filter(
+            InventoryManagementMaster.Id.in_(ids_to_delete)
+        ).delete(synchronize_session=False)
+
+        db.session.commit()
+        return jsonify({"message": "Deleted successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()  # Rollback on error
+        return jsonify({"error": str(e)}), 500
+

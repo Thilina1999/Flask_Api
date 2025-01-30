@@ -1,7 +1,7 @@
 from flask import request
 
 from ...app import app
-from ..controllers.imm_controller import list_all_inventory_controller, create_inventory_management_master, list_all_stock_controller, create_base_stock, insert_data_ims
+from ..controllers.imm_controller import list_all_inventory_controller, create_inventory_management_master, list_all_stock_controller, create_base_stock, insert_data_ims, delete_master_items
 from ..controllers.ims_controller import list_all_history_controller, create_inventory_history, insert_data
 
 @app.route("/inventory", methods=['GET', 'POST'])
@@ -32,3 +32,7 @@ def list_create_history_master():
     if request.method == 'POST': return insert_data_ims()
     else: return 'Method is Not Allowed'
 
+@app.route("/delete_master", methods=['POST'])
+def delete_master():
+    if request.method == 'POST': return delete_master_items()
+    else: return 'Method is Not Allowed'
