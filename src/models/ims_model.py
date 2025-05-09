@@ -1,37 +1,29 @@
-from sqlalchemy import ForeignKey
 from datetime import datetime
-from sqlalchemy.orm import relationship
-from sqlalchemy.types import String, Integer, BigInteger, DateTime
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import Column, NCHAR, NVARCHAR, Integer, DateTime
 
 db = SQLAlchemy()
 
-# ----------------------------------------------- #
+class Inventory(db.Model):
+    __tablename__ = 'inventory'
 
-class InventoryHistory(db.Model):
-    """Model representing Inventory History Table."""
-    
-    __tablename__ = 'inventory_history'
-
-    # Columns
-    id = db.Column(Integer, primary_key=True, autoincrement=True)
-    assy_part_number = db.Column(BigInteger, nullable=False)
-    subassy_product_number = db.Column(BigInteger, nullable=False)
-    manufacturer = db.Column(String(255), nullable=False)
-    shipping_classification = db.Column(String(50), nullable=False)
-    airtightness_inspection = db.Column(Integer, nullable=False)
-    scu = db.Column(Integer, nullable=False)
-    water_vapor_test = db.Column(Integer, nullable=False)
-    characteristic_inspection = db.Column(Integer, nullable=False)
-    char_inspection_fractional_items = db.Column(Integer, nullable=False)
-    accessor = db.Column(Integer, nullable=False)
-    fa = db.Column(Integer, nullable=False)
-    fa_fractional_items = db.Column(Integer, nullable=False)
-    visual_inspection = db.Column(Integer, nullable=False)
-    update_date_time = db.Column(DateTime, nullable=False, default=datetime.now)
+    ASSY品番 = db.Column(NVARCHAR(20), primary_key=True, nullable=False)
+    SUBASSY品番 = db.Column(NCHAR(20), nullable=False)
+    メーカ = db.Column(NVARCHAR(40), nullable=False)
+    出荷区分 = db.Column(NVARCHAR(40), nullable=False)
+    気密検査 = db.Column(Integer, nullable=False)
+    SCU = db.Column(Integer, nullable=False)
+    水蒸気検査 = db.Column(Integer, nullable=False)
+    特性検査 = db.Column(Integer, nullable=False)
+    特性検査端数品 = db.Column(Integer, nullable=False)
+    アクセサリ = db.Column(Integer, nullable=False)
+    FA = db.Column(Integer, nullable=False)
+    FA端数品 = db.Column(Integer, nullable=False)
+    外観検査 = db.Column(Integer, nullable=False)
+    更新日時 = db.Column(DateTime, nullable=False, default=datetime.now)
 
     def to_dict(self):
         return {c.key: getattr(self, c.key) for c in self.__table__.columns}
 
     def __repr__(self):
-        return f"<InventoryHistory(BaseStockID={self.BaseStockID})>"
+        return f"<Inventory(ASSY品番={self.ASSY品番})>"

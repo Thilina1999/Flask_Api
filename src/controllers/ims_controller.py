@@ -2,16 +2,16 @@ from flask import request, jsonify
 import uuid
 from datetime import datetime
 from ... import db
-from ..models.ims_model import InventoryHistory
+from ..models.ims_model import Inventory
 import pandas as pd
 import numpy as np
 import csv
 import sys
 
-def list_all_history_controller():
-    inventoryHistories = InventoryHistory.query.all()
+def list_all_Inventory_controller():
+    inventory = Inventory.query.all()
     response = []
-    for inventoryHistory in inventoryHistories: response.append(inventoryHistory.to_dict())
+    for inventory in inventory: response.append(inventory.to_dict())
     return jsonify(response)
 
 def create_inventory_history():
@@ -47,7 +47,7 @@ def create_inventory_history():
         return jsonify({"error": f"Missing required fields: {', '.join(missing_fields)}"}), 400
 
     # Create new InventoryHistory record
-    new_inventory_history = InventoryHistory(
+    new_inventory_history = Inventory(
         assy_part_number=assy_part_number,
         subassy_product_number=subassy_product_number,
         manufacturer=manufacturer,
@@ -82,48 +82,42 @@ def insert_data():
     
     try:
         # Read the Excel file into a Pandas DataFrame
-        df = pd.read_excel(file)
+        df = pd.read_csv(file)
 
         # Drop duplicate rows to get distinct data
         distinct_data = df.drop_duplicates()
 
         # Check if required columns exist in the Excel file
         required_columns = [
-            'assy_part_number', 'subassy_product_number', 'manufacturer', 
-            'shipping_classification', 'airtightness_inspection', 'scu', 
-            'water_vapor_test', 'characteristic_inspection', 
-            'char_inspection_fractional_items', 'accessor', 'fa', 
-            'fa_fractional_items', 'visual_inspection', 'update_date_time'
+            'ASSY品番', 'SUBASSY品番', 'メーカ', 
+            '出荷区分', '気密検査', 'SCU', 
+            '水蒸気検査', '特性検査', 
+            '特性検査端数品', 'アクセサリ', 'FA', 
+            'FA端数品', '外観検査', '更新日時'
         ]
 
         if not all(col in distinct_data.columns for col in required_columns):
             return jsonify({'error': 'Missing required columns in the Excel file'}), 400
 
-        # Process date column
-        distinct_data['update_date_time'] = pd.to_datetime(distinct_data['update_date_time'], errors='coerce')
-
-        # Handle invalid dates
-        if distinct_data['update_date_time'].isnull().any():
-            return jsonify({'error': 'Invalid date format in update_date_time column'}), 400
 
         # Insert data row by row into the database
         records = []
         for _, row in distinct_data.iterrows():
-            record = InventoryHistory(
-                assy_part_number=row['assy_part_number'],
-                subassy_product_number=row['subassy_product_number'],
-                manufacturer=row['manufacturer'],
-                shipping_classification=row['shipping_classification'],
-                airtightness_inspection=row['airtightness_inspection'],
-                scu=row['scu'],
-                water_vapor_test=row['water_vapor_test'],
-                characteristic_inspection=row['characteristic_inspection'],
-                char_inspection_fractional_items=row['char_inspection_fractional_items'],
-                accessor=row['accessor'],
-                fa=row['fa'],
-                fa_fractional_items=row['fa_fractional_items'],
-                visual_inspection=row['visual_inspection'],
-                update_date_time=row['update_date_time']
+            record = Inventory(
+                ASSY品番=row['ASSY品番'],
+                SUBASSY品番=row['SUBASSY品番'],
+                メーカ=row['メーカ'],
+                出荷区分=row['出荷区分'],
+                気密検査=row['気密検査'],
+                SCU=row['SCU'],
+                水蒸気検査=row['水蒸気検査'],
+                特性検査=row['特性検査'],
+                特性検査端数品=row['特性検査端数品'],
+                アクセサリ=row['アクセサリ'],
+                FA=row['FA'],
+                FA端数品=row['FA端数品'],
+                外観検査=row['外観検査'],
+                更新日時=row['更新日時']
             )
             records.append(record)
 
