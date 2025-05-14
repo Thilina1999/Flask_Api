@@ -1,6 +1,14 @@
 import os
 class Config:
-    SQLALCHEMY_TRACK_MODIFICATIONS = True
+    SQLALCHEMY_TRACK_MODIFICATIONS = False  # Should typically be False for better performance
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 10,                   # Default number of connections
+        'max_overflow': 20,                 # Max connections allowed beyond pool_size
+        'pool_timeout': 30,                 # Seconds to wait for a connection
+        'pool_recycle': 3600,               # Recycle connections after 1 hour
+        'pool_pre_ping': True              # Test connections for health before use
+    }
+    PROPAGATE_EXCEPTIONS = True            # Better error handling
 class DevelopmentConfig(Config):
     DEVELOPMENT = True
     DEBUG = True

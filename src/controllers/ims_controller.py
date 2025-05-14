@@ -1,12 +1,10 @@
 from flask import request, jsonify
 import uuid
-from datetime import datetime
 from ... import db
 from ..models.ims_model import Inventory
 import pandas as pd
 import numpy as np
-import csv
-import sys
+from sqlalchemy import distinct
 
 def list_all_Inventory_controller():
     inventory = Inventory.query.all()
@@ -14,62 +12,29 @@ def list_all_Inventory_controller():
     for inventory in inventory: response.append(inventory.to_dict())
     return jsonify(response)
 
-def create_inventory_history():
-    """Endpoint to create a new InventoryHistory record."""
-    
-    # Parse JSON data from request
-    request_data = request.get_json()
+def list_all_Inventory_page_controller():
+    page = request.args.get('page', default=1, type=int)
+    per_page = request.args.get('per_page', default=10, type=int)
 
-    # Extract values from the JSON payload
-    assy_part_number = request_data.get('assy_part_number')
-    subassy_product_number = request_data.get('subassy_product_number')
-    manufacturer = request_data.get('manufacturer')
-    shipping_classification = request_data.get('shipping_classification')
-    airtightness_inspection = request_data.get('airtightness_inspection')
-    scu = request_data.get('scu')
-    water_vapor_test = request_data.get('water_vapor_test')
-    characteristic_inspection = request_data.get('characteristic_inspection')
-    char_inspection_fractional_items = request_data.get('char_inspection_fractional_items')
-    accessor = request_data.get('accessor')
-    fa = request_data.get('fa')
-    fa_fractional_items = request_data.get('fa_fractional_items')
-    visual_inspection = request_data.get('visual_inspection')
-
-    # Validate required fields
-    required_fields = [
-        'assy_part_number', 'subassy_product_number', 'manufacturer', 'shipping_classification',
-        'airtightness_inspection', 'scu', 'water_vapor_test', 'characteristic_inspection',
-        'char_inspection_fractional_items', 'accessor', 'fa', 'fa_fractional_items', 'visual_inspection'
-    ]
-    
-    missing_fields = [field for field in required_fields if request_data.get(field) is None]
-    if missing_fields:
-        return jsonify({"error": f"Missing required fields: {', '.join(missing_fields)}"}), 400
-
-    # Create new InventoryHistory record
-    new_inventory_history = Inventory(
-        assy_part_number=assy_part_number,
-        subassy_product_number=subassy_product_number,
-        manufacturer=manufacturer,
-        shipping_classification=shipping_classification,
-        airtightness_inspection=airtightness_inspection,
-        scu=scu,
-        water_vapor_test=water_vapor_test,
-        characteristic_inspection=characteristic_inspection,
-        char_inspection_fractional_items=char_inspection_fractional_items,
-        accessor=accessor,
-        fa=fa,
-        fa_fractional_items=fa_fractional_items,
-        visual_inspection=visual_inspection,
-        update_date_time=datetime.now()  # Set current timestamp
+    # Ensure ordering — replace `Inventory.id` with a suitable sortable field
+    pagination = Inventory.query.order_by(Inventory.ASSY品番).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
     )
 
-    # Add and commit to database
-    db.session.add(new_inventory_history)
-    db.session.commit()
+    response = {
+        "data": [item.to_dict() for item in pagination.items],
+        "meta": {
+            "page": pagination.page,
+            "per_page": pagination.per_page,
+            "total_pages": pagination.pages,
+            "total_items": pagination.total
+        }
+    }
 
-    # Return response
-    return jsonify(new_inventory_history.to_dict()), 201  # 201 Created
+    return jsonify(response)
+
 
 def insert_data():
     if 'file' not in request.files:
@@ -132,3 +97,24 @@ def insert_data():
         return jsonify({'error': str(e)}), 500
 
 
+def get_distinct_manufacturers():
+    try:
+        manufacturers = db.session.query(distinct(Inventory.メーカ)).all()
+
+        manufacturer_list = [m[0] for m in manufacturers]
+
+        return jsonify(manufacturer_list), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+def get_shipping_classification():
+    try:
+        shipping_classification = db.session.query(distinct(Inventory.出荷区分)).all()
+
+        shipping_classification_list = [m[0] for m in shipping_classification]
+
+        return jsonify(shipping_classification_list), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
