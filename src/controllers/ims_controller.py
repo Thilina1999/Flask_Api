@@ -16,8 +16,24 @@ def list_all_Inventory_page_controller():
     page = request.args.get('page', default=1, type=int)
     per_page = request.args.get('per_page', default=10, type=int)
 
-    # Ensure ordering — replace `Inventory.id` with a suitable sortable field
-    pagination = Inventory.query.order_by(Inventory.ASSY品番).paginate(
+    subassy = request.args.get('SUBASSY品番')
+    maker = request.args.get('メーカ')
+    shipping = request.args.get('出荷区分')
+
+
+    # Start with base query
+    query = Inventory.query
+
+    # Apply filters only if present
+    if subassy:
+        query = query.filter(Inventory.SUBASSY品番 == subassy)
+    if maker:
+        query = query.filter(Inventory.メーカ == maker)
+    if shipping:
+        query = query.filter(Inventory.出荷区分 == shipping)
+
+    # Paginate the final query
+    pagination = query.order_by(Inventory.ASSY品番).paginate(
         page=page,
         per_page=per_page,
         error_out=False
