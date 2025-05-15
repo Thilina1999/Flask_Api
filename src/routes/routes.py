@@ -1,20 +1,8 @@
 from flask import request
 
 from ...app import app
-from ..controllers.imm_controller import list_all_inventory_controller, create_inventory_management_master, list_all_stock_controller, create_base_stock, insert_data_ims, delete_master_items
 from ..controllers.ims_controller import list_all_Inventory_controller, get_distinct_manufacturers, insert_data, get_shipping_classification, list_all_Inventory_page_controller
-
-@app.route("/inventory_data", methods=['GET', 'POST'])
-def list_create_accounts():
-    if request.method == 'GET': return list_all_inventory_controller()
-    if request.method == 'POST': return create_inventory_management_master()
-    else: return 'Method is Not Allowed'
-
-@app.route("/stock", methods=['GET', 'POST'])
-def list_create_stock_accounts():
-    if request.method == 'GET': return list_all_stock_controller()
-    if request.method == 'POST': return create_base_stock()
-    else: return 'Method is Not Allowed'
+from ..controllers.imm_controller import list_all_Noxstatus_controller, insert_nox_data,  list_all_Noxstatus_page_controller
 
 # Inventory
 @app.route("/inventory", methods=['GET'])
@@ -42,13 +30,19 @@ def list_get_iventory_paginate():
     if request.method == 'GET': return list_all_Inventory_page_controller()
     else: return 'Method is Not Allowed'
 
-# Histroy
-@app.route("/history_insert_ims", methods=['POST'])
-def list_create_history_master():
-    if request.method == 'POST': return insert_data_ims()
+#NoxStatus
+@app.route("/status", methods=['GET'])
+def list_noxstatus_data():
+    if request.method == 'GET': return list_all_Noxstatus_controller()
     else: return 'Method is Not Allowed'
 
-@app.route("/delete_master", methods=['POST'])
-def delete_master():
-    if request.method == 'POST': return delete_master_items()
+@app.route("/status_insert", methods=['POST'])
+def list_create_noxstatus_insert():
+    if request.method == 'POST': return insert_nox_data()
     else: return 'Method is Not Allowed'
+
+@app.route("/status_page", methods=['GET'])
+def list_get_status_paginate():
+    if request.method == 'GET': return list_all_Noxstatus_page_controller()
+    else: return 'Method is Not Allowed'
+

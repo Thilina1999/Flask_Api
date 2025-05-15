@@ -3,104 +3,20 @@ from flask import request, jsonify
 import uuid
 
 from ... import db
-from ..models.imm_model import InventoryManagementMaster
-from ..models.imm_model import BaseStock
+from ..models.imm_model import NoxStatus
 from flask import request, jsonify
 import pandas as pd
 import numpy as np
 import csv
 import sys
 
-
-# ----------------------------------------------- #
-
-# Query Object Methods => https://docs.sqlalchemy.org/en/14/orm/query.html#sqlalchemy.orm.Query
-# Session Object Methods => https://docs.sqlalchemy.org/en/14/orm/session_api.html#sqlalchemy.orm.Session
-# How to serialize SqlAlchemy PostgreSQL Query to JSON => https://stackoverflow.com/a/46180522
-
-def list_all_inventory_controller():
-    inventories = InventoryManagementMaster.query.all()
+def list_all_Noxstatus_controller():
+    noxstatus = NoxStatus.query.all()
     response = []
-    for inventory in inventories: response.append(inventory.to_dict())
+    for noxstatus in noxstatus: response.append(noxstatus.to_dict())
     return jsonify(response)
 
-def list_all_stock_controller():
-    baseStocks = BaseStock.query.all()
-    response = []
-    for baseStock in baseStocks: response.append(baseStock.to_dict())
-    return jsonify(response)
-
-
-def create_inventory_management_master():
-    # Parse JSON data from the request body
-    request_data = request.get_json()
-
-    # Access the data from the JSON payload
-    EquipmentNumber = request_data.get('EquipmentNumber')
-    FacilityGroupID = request_data.get('FacilityGroupID')
-    FacilityGroupName = request_data.get('FacilityGroupName')
-    InventoryManagementGroupID = request_data.get('InventoryManagementGroupID')
-    InventoryManagementGroupName = request_data.get('InventoryManagementGroupName')
-    StandardInventoryControlRange = request_data.get('StandardInventoryControlRange')
-    StandardInventoryDays = request_data.get('StandardInventoryDays')
-
-    # Check if required fields are present
-    if not EquipmentNumber or not FacilityGroupID or not FacilityGroupName:
-        return jsonify({"error": "Missing required fields"}), 400
-
-    # Create the new inventory record
-    new_inventory = InventoryManagementMaster(
-        EquipmentNumber=EquipmentNumber,
-        FacilityGroupID=FacilityGroupID,
-        FacilityGroupName=FacilityGroupName,
-        InventoryManagementGroupID=InventoryManagementGroupID,
-        InventoryManagementGroupName=InventoryManagementGroupName,
-        StandardInventoryControlRange=StandardInventoryControlRange,
-        StandardInventoryDays=StandardInventoryDays
-    )
-
-    # Add and commit the new inventory record to the database
-    db.session.add(new_inventory)
-    db.session.commit()
-
-    # Convert the new inventory object to a dictionary and return as JSON
-    response = new_inventory.to_dict()  # Assuming to_dict() method exists in your model
-    return jsonify(response)
-
-def create_base_stock():
-    """Endpoint to create a new BaseStock record."""
-    
-    # Parse JSON data from request
-    request_data = request.get_json()
-
-    # Extract values from the JSON payload
-    InventoryManagementId = request_data.get('InventoryManagementId')
-    BaseStockLevel = request_data.get('BaseStockLevel')
-
-    # Validate required fields
-    if not InventoryManagementId:
-        return jsonify({"error": "InventoryManagementId is required"}), 400
-    
-    # Check if the referenced InventoryManagementMaster exists
-    inventory_management = InventoryManagementMaster.query.get(InventoryManagementId)
-    if not inventory_management:
-        return jsonify({"error": "Invalid InventoryManagementId"}), 404
-
-    # Create new BaseStock record
-    new_base_stock = BaseStock(
-        InventoryManagementId=InventoryManagementId,
-        BaseStockLevel=BaseStockLevel,
-        LastUpdated=datetime.now()  # Set current timestamp
-    )
-
-    # Add and commit to database
-    db.session.add(new_base_stock)
-    db.session.commit()
-
-    # Return response
-    return jsonify(new_base_stock.to_dict()), 201  # 201 Created
-
-def insert_data_ims():
+def insert_nox_data():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part in the request'}), 400
 
@@ -110,46 +26,44 @@ def insert_data_ims():
         return jsonify({'error': 'No file selected for uploading'}), 400
 
     try:
-        # Read the Excel file into a Pandas DataFrame
-        df = pd.read_excel(file)
+        df = pd.read_csv(file)
 
-        # Drop duplicate rows to get distinct data
+        # Drop duplicates
         distinct_data = df.drop_duplicates()
 
-        # Check if required columns exist in the Excel file
+        # Required columns
         required_columns = [
-            'FacilityGroupID', 'EquipmentNumber', 'FacilityGroupName',
-            'InventoryManagementGroupID', 'InventoryManagementGroupName',
-            'StandardInventoryDays', 'StandardInventoryControlRange'
+            '棚札ID', '品番', '次工程名称', '加工Lot',
+            '数量', '作業状況', '棚札登録日時',
+            '棚札更新日時', '滞留日数'
         ]
 
         if not all(col in distinct_data.columns for col in required_columns):
-            return jsonify({'error': 'Missing required columns in the Excel file'}), 400
+            return jsonify({'error': 'Missing required columns in the CSV file'}), 400
 
-        # Convert numeric fields and handle errors
-        numeric_columns = ['StandardInventoryDays', 'StandardInventoryControlRange']
-        for col in numeric_columns:
-            distinct_data[col] = pd.to_numeric(distinct_data[col], errors='coerce')
+        # Convert datetime fields and handle errors
+        for col in ['棚札登録日時', '棚札更新日時']:
+            distinct_data[col] = pd.to_datetime(distinct_data[col], errors='coerce')  # Converts bad values to NaT
+            distinct_data[col] = distinct_data[col].dt.strftime('%Y-%m-%d %H:%M:%S')  # Format for SQL Server
 
-        # Check for invalid numeric values
-        if distinct_data[numeric_columns].isnull().any().any():
-            return jsonify({'error': 'Invalid numeric format in numeric columns'}), 400
+        # Drop rows where ID or datetime is missing
+        distinct_data = distinct_data.dropna(subset=['棚札ID', '棚札登録日時', '棚札更新日時'])
 
-        # Insert data row by row into the database
         records = []
         for _, row in distinct_data.iterrows():
-            record = InventoryManagementMaster(
-                FacilityGroupID=row['FacilityGroupID'],
-                EquipmentNumber=row['EquipmentNumber'],
-                FacilityGroupName=row['FacilityGroupName'],
-                InventoryManagementGroupID=row['InventoryManagementGroupID'],
-                InventoryManagementGroupName=row['InventoryManagementGroupName'],
-                StandardInventoryDays=row['StandardInventoryDays'],
-                StandardInventoryControlRange=row['StandardInventoryControlRange']
+            record = NoxStatus(
+                棚札ID=row['棚札ID'],
+                品番=row['品番'],
+                次工程名称=row['次工程名称'],
+                加工Lot=row['加工Lot'],
+                数量=int(row['数量']) if not pd.isnull(row['数量']) else None,
+                作業状況=int(row['作業状況']) if not pd.isnull(row['作業状況']) else None,
+                棚札登録日時=datetime.strptime(row['棚札登録日時'], '%Y-%m-%d %H:%M:%S'),
+                棚札更新日時=datetime.strptime(row['棚札更新日時'], '%Y-%m-%d %H:%M:%S'),
+                滞留日数=int(row['滞留日数']) if not pd.isnull(row['滞留日数']) else None
             )
             records.append(record)
 
-        # Add all records in one bulk transaction
         db.session.bulk_save_objects(records)
         db.session.commit()
 
@@ -159,28 +73,29 @@ def insert_data_ims():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-def delete_master_items():
-    try:
-        data = request.get_json()
-        ids_to_delete = data.get("ids", [])
+def list_all_Noxstatus_page_controller():
+    page = request.args.get('page', default=1, type=int)
+    per_page = request.args.get('per_page', default=10, type=int)
 
-        if not ids_to_delete:
-            return jsonify({"message": "No IDs provided"}), 400
+    # Start with base query
+    query = NoxStatus.query
 
-        # Delete related records in BaseStock first
-        db.session.query(BaseStock).filter(
-            BaseStock.InventoryManagementId.in_(ids_to_delete)
-        ).delete(synchronize_session=False)
+    # Paginate the query
+    pagination = query.order_by(NoxStatus.棚札ID).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
 
-        # Now delete from InventoryManagementMaster
-        db.session.query(InventoryManagementMaster).filter(
-            InventoryManagementMaster.Id.in_(ids_to_delete)
-        ).delete(synchronize_session=False)
+    response = {
+        "data": [item.to_dict() for item in pagination.items],
+        "meta": {
+            "page": pagination.page,
+            "per_page": pagination.per_page,
+            "total_pages": pagination.pages,
+            "total_items": pagination.total
+        }
+    }
 
-        db.session.commit()
-        return jsonify({"message": "Deleted successfully"}), 200
-
-    except Exception as e:
-        db.session.rollback()  # Rollback on error
-        return jsonify({"error": str(e)}), 500
+    return jsonify(response)
 

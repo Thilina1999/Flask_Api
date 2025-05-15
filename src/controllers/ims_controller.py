@@ -26,7 +26,7 @@ def list_all_Inventory_page_controller():
 
     # Apply filters only if present
     if subassy:
-        query = query.filter(Inventory.SUBASSY品番 == subassy)
+        query = query.filter(Inventory.SUBASSY品番.like(f'{subassy}%'))
     if maker:
         query = query.filter(Inventory.メーカ == maker)
     if shipping:
