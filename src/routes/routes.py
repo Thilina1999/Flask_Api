@@ -1,7 +1,7 @@
 from flask import request
 
 from ...app import app
-from ..controllers.ims_controller import list_all_Inventory_controller, get_distinct_manufacturers, insert_data, get_shipping_classification, list_all_Inventory_page_controller
+from ..controllers.ims_controller import list_all_Inventory_controller, get_distinct_manufacturers, insert_data, get_shipping_classification, list_all_Inventory_page_controller, get_inventory_sums
 from ..controllers.imm_controller import list_all_Noxstatus_controller, insert_nox_data,  list_all_Noxstatus_page_controller
 
 # Inventory
@@ -28,6 +28,11 @@ def list_get_manufactures():
 @app.route("/inventory_page", methods=['GET'])
 def list_get_iventory_paginate():
     if request.method == 'GET': return list_all_Inventory_page_controller()
+    else: return 'Method is Not Allowed'
+
+@app.route("/inventory_sum", methods=['GET'])
+def list_get_iventory_sums():
+    if request.method == 'GET': return get_inventory_sums()
     else: return 'Method is Not Allowed'
 
 #NoxStatus

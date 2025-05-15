@@ -4,7 +4,7 @@ from ... import db
 from ..models.ims_model import Inventory
 import pandas as pd
 import numpy as np
-from sqlalchemy import distinct
+from sqlalchemy import distinct, func
 
 def list_all_Inventory_controller():
     inventory = Inventory.query.all()
@@ -20,11 +20,8 @@ def list_all_Inventory_page_controller():
     maker = request.args.get('メーカ')
     shipping = request.args.get('出荷区分')
 
-
-    # Start with base query
     query = Inventory.query
 
-    # Apply filters only if present
     if subassy:
         query = query.filter(Inventory.SUBASSY品番.like(f'{subassy}%'))
     if maker:
@@ -32,24 +29,54 @@ def list_all_Inventory_page_controller():
     if shipping:
         query = query.filter(Inventory.出荷区分 == shipping)
 
-    # Paginate the final query
+    # Paginate the filtered query
     pagination = query.order_by(Inventory.ASSY品番).paginate(
         page=page,
         per_page=per_page,
         error_out=False
     )
 
-    response = {
-        "data": [item.to_dict() for item in pagination.items],
-        "meta": {
-            "page": pagination.page,
-            "per_page": pagination.per_page,
-            "total_pages": pagination.pages,
-            "total_items": pagination.total
-        }
-    }
+    # Compute sums for the filtered data
+    try:
+        sums = query.with_entities(
+            func.sum(Inventory.気密検査).label("気密検査"),
+            func.sum(Inventory.SCU).label("SCU"),
+            func.sum(Inventory.水蒸気検査).label("水蒸気検査"),
+            func.sum(Inventory.特性検査).label("特性検査"),
+            func.sum(Inventory.特性検査端数品).label("特性検査端数品"),
+            func.sum(Inventory.アクセサリ).label("アクセサリ"),
+            func.sum(Inventory.FA).label("FA"),
+            func.sum(Inventory.FA端数品).label("FA端数品"),
+            func.sum(Inventory.外観検査).label("外観検査"),
+        ).one()
 
-    return jsonify(response)
+        summary = {
+            "気密検査": sums.気密検査 or 0,
+            "SCU": sums.SCU or 0,
+            "水蒸気検査": sums.水蒸気検査 or 0,
+            "特性検査": sums.特性検査 or 0,
+            "特性検査端数品": sums.特性検査端数品 or 0,
+            "アクセサリ": sums.アクセサリ or 0,
+            "FA": sums.FA or 0,
+            "FA端数品": sums.FA端数品 or 0,
+            "外観検査": sums.外観検査 or 0,
+        }
+
+        response = {
+            "data": [item.to_dict() for item in pagination.items],
+            "meta": {
+                "page": pagination.page,
+                "per_page": pagination.per_page,
+                "total_pages": pagination.pages,
+                "total_items": pagination.total
+            },
+            "summary": summary
+        }
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 def insert_data():
@@ -133,4 +160,35 @@ def get_shipping_classification():
         return jsonify(shipping_classification_list), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e)}), 
+    
+def get_inventory_sums():
+    try:
+        result = db.session.query(
+            func.sum(Inventory.気密検査).label("気密検査"),
+            func.sum(Inventory.SCU).label("SCU"),
+            func.sum(Inventory.水蒸気検査).label("水蒸気検査"),
+            func.sum(Inventory.特性検査).label("特性検査"),
+            func.sum(Inventory.特性検査端数品).label("特性検査端数品"),
+            func.sum(Inventory.アクセサリ).label("アクセサリ"),
+            func.sum(Inventory.FA).label("FA"),
+            func.sum(Inventory.FA端数品).label("FA端数品"),
+            func.sum(Inventory.外観検査).label("外観検査"),
+        ).one()
+
+        data = {
+            "気密検査": result.気密検査 or 0,
+            "SCU": result.SCU or 0,
+            "水蒸気検査": result.水蒸気検査 or 0,
+            "特性検査": result.特性検査 or 0,
+            "特性検査端数品": result.特性検査端数品 or 0,
+            "アクセサリ": result.アクセサリ or 0,
+            "FA": result.FA or 0,
+            "FA端数品": result.FA端数品 or 0,
+            "外観検査": result.外観検査 or 0,
+        }
+
+        return jsonify(data), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 
