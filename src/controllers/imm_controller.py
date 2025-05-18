@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import csv
 import sys
+from sqlalchemy import distinct
 
 def list_all_Noxstatus_controller():
     noxstatus = NoxStatus.query.all()
@@ -77,9 +78,23 @@ def list_all_Noxstatus_page_controller():
     page = request.args.get('page', default=1, type=int)
     per_page = request.args.get('per_page', default=10, type=int)
 
+    tanafuda_id = request.args.get('棚札ID')
+    product_number = request.args.get('品番')
+    next_process_name = request.args.get('次工程名称')
+    work_status = request.args.get('作業状況')
+    
     # Start with base query
     query = NoxStatus.query
 
+    if tanafuda_id:
+        query = query.filter(NoxStatus.棚札ID.like(f'{tanafuda_id}%'))
+    if product_number:
+        query = query.filter(NoxStatus.品番.like(f'{product_number}%'))    
+    if next_process_name:
+        query = query.filter(NoxStatus.次工程名称 == next_process_name)
+    if work_status:
+        query = query.filter(NoxStatus.作業状況 == work_status)
+    
     # Paginate the query
     pagination = query.order_by(NoxStatus.棚札ID).paginate(
         page=page,
@@ -99,3 +114,24 @@ def list_all_Noxstatus_page_controller():
 
     return jsonify(response)
 
+def get_distinct_subproject():
+    try:
+        subprojects = db.session.query(distinct(NoxStatus.次工程名称)).all()
+
+        subproject_list = [m[0] for m in subprojects]
+
+        return jsonify(subproject_list), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+def get_distinct_status():
+    try:
+        status = db.session.query(distinct(NoxStatus.作業状況)).all()
+
+        status_list = [m[0] for m in status]
+
+        return jsonify(status_list), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
