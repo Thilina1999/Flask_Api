@@ -61,6 +61,8 @@ def list_all_Inventory_page_controller():
             "FA端数品": sums.FA端数品 or 0,
             "外観検査": sums.外観検査 or 0,
         }
+        
+        summary["total"] = sum(summary.values())
 
         response = {
             "data": [item.to_dict() for item in pagination.items],
