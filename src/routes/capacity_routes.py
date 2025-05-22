@@ -3,7 +3,9 @@ from ...app import app
 from ..controllers.iiav_controller import (
     list_all_CapacityWeekly_controller,
     insert_capacity_data,
-    list_all_CapacityWeekly_page_controller
+    list_all_CapacityWeekly_page_controller,
+    get_distinct_manufacturers_buffer,
+    get_shipping_classification_buffer
 )
 
 # WeeklyCapacity Routes
@@ -20,4 +22,14 @@ def list_create_weekly_capacity_insert():
 @app.route("/capacity_weekly_page", methods=['GET'])
 def list_get_capacity_weekly_paginate():
     if request.method == 'GET': return list_all_CapacityWeekly_page_controller()
+    else: return 'Method is Not Allowed'
+    
+@app.route("/manufacture_buffer", methods=['GET'])
+def list_get_manufacuture_buffer():
+    if request.method == 'GET': return get_distinct_manufacturers_buffer()
+    else: return 'Method is Not Allowed'
+    
+@app.route("/shipping_classification_buffer", methods=['GET'])
+def list_get_shipping_classification_buffer():
+    if request.method == 'GET': return get_shipping_classification_buffer()
     else: return 'Method is Not Allowed'
