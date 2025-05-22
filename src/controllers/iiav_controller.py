@@ -110,3 +110,25 @@ def list_all_CapacityWeekly_page_controller():
     }
 
     return jsonify(response)
+
+def get_distinct_manufacturers_buffer():
+    try:
+        manufacturers = db.session.query(distinct(CapacityWeekly.メーカ)).all()
+
+        manufacturer_list = [m[0] for m in manufacturers]
+
+        return jsonify(manufacturer_list), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+def get_shipping_classification_buffer():
+    try:
+        shipping_classification = db.session.query(distinct(CapacityWeekly.出荷区分)).all()
+
+        shipping_classification_list = [m[0] for m in shipping_classification]
+
+        return jsonify(shipping_classification_list), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 
