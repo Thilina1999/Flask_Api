@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import csv
 import sys
-from sqlalchemy import distinct
+from sqlalchemy import distinct, inspect
 
 
 def list_all_CapacityWeekly_controller():
@@ -89,9 +89,22 @@ def list_all_CapacityWeekly_page_controller():
     page = request.args.get('page', default=1, type=int)
     per_page = request.args.get('per_page', default=10, type=int)
 
+    num = request.args.get('品番')
+    maker = request.args.get('メーカ')
+    shipping = request.args.get('出荷区分')
+    range1 = request.args.get('開始工程')
+    range2 = request.args.get('終了工程')
+    
     # Start with base query
     query = CapacityWeekly.query
 
+    if num:
+        query = query.filter(CapacityWeekly.品番.like(f'{num}%'))
+    if maker:
+        query = query.filter(CapacityWeekly.メーカ == maker)
+    if shipping:
+        query = query.filter(CapacityWeekly.出荷区分 == shipping)
+        
     # Paginate the query
     pagination = query.order_by(CapacityWeekly.品番).paginate(
         page=page,
@@ -99,8 +112,25 @@ def list_all_CapacityWeekly_page_controller():
         error_out=False
     )
 
+    # Process all items to include range_sum where applicable
+    items_data = []
+    for item in pagination.items:
+        item_dict = item.to_dict()
+        
+        # Calculate range sum for this item
+        range_sum = calculate_range_sum(
+            item,
+            range1,
+            range2
+        )
+        
+        if range_sum is not None:
+            item_dict['range_sum'] = range_sum
+            
+        items_data.append(item_dict)
+
     response = {
-        "data": [item.to_dict() for item in pagination.items],
+        "data": items_data,
         "meta": {
             "page": pagination.page,
             "per_page": pagination.per_page,
@@ -110,6 +140,7 @@ def list_all_CapacityWeekly_page_controller():
     }
 
     return jsonify(response)
+
 
 def get_distinct_manufacturers_buffer():
     try:
@@ -132,3 +163,36 @@ def get_shipping_classification_buffer():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 
+    
+    
+def calculate_range_sum(item, range1, range2):
+    if not (range1 and range2):
+        return None
+    
+    # Get the model class from the instance
+    model_class = item.__class__
+    
+    # Use SQLAlchemy inspector to get columns in proper order
+    inspector = inspect(model_class)
+    columns = [column.name for column in inspector.columns]
+    
+    try:
+        # Find positions of range columns
+        start_idx = columns.index(range1)
+        end_idx = columns.index(range2)
+        
+        # Swap if ranges are reversed
+        if start_idx > end_idx:
+            start_idx, end_idx = end_idx, start_idx
+        
+        # Calculate sum of all numeric values in range
+        range_sum = 0
+        for col in columns[start_idx:end_idx+1]:
+            value = getattr(item, col)
+            if isinstance(value, (int, float)):
+                range_sum += value
+        
+        return range_sum
+        
+    except ValueError:  # If columns don't exist
+        return None

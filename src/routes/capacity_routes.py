@@ -1,12 +1,6 @@
 from flask import request
 from ...app import app
-from ..controllers.iiav_controller import (
-    list_all_CapacityWeekly_controller,
-    insert_capacity_data,
-    list_all_CapacityWeekly_page_controller,
-    get_distinct_manufacturers_buffer,
-    get_shipping_classification_buffer
-)
+from ..controllers.iiav_controller import *
 
 # WeeklyCapacity Routes
 @app.route("/capacity", methods=['GET'])
