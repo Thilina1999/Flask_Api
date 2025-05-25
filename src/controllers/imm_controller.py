@@ -135,3 +135,4 @@ def get_distinct_status():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    

@@ -8,7 +8,27 @@ def list_get_inventory_history():
     if request.method == 'GET': return list_all_inventory_history_controller()
     else: return 'Method is Not Allowed'
     
-@app.route("/history", methods=['GET'])
-def list_get_inventory_history():
+@app.route("/threshold", methods=['GET'])
+def list_get_threshold():
     if request.method == 'GET': return list_all_msgt_threshold_controller()
     else: return 'Method is Not Allowed'
+    
+@app.route("/insert_history", methods=['POST'])
+def list_history_inventory_insert():
+    if request.method == 'POST': return insert_inventory_history_data()
+    else: return 'Method is Not Allowed'
+
+@app.route("/insert_threshold", methods=['POST'])
+def list_mgt_threshold_insert():
+    if request.method == 'POST': return insert_mgt_thresh_hold_data()
+    else: return 'Method is Not Allowed' 
+
+@app.route("/group_name", methods=['GET'])
+def list_get_group_name():
+    if request.method == 'GET': return get_group_name()
+    else: return 'Method is Not Allowed' 
+    
+@app.route("/inventory_history", methods=['GET'])
+def list_get_selected_inventory_history():
+    if request.method == 'GET': return list_all_Selected_History_controller()
+    else: return 'Method is Not Allowed' 
