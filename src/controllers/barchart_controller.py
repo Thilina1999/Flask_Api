@@ -174,3 +174,34 @@ def list_all_Selected_History_controller():
         }), 400
     except Exception as e:
         return jsonify({'error': f'An error occurred: {str(e)}'}), 500
+    
+def get_threshold_controller():
+    part_number = request.args.get('品番')
+    group_name = request.args.get('在庫管理グループ名称')
+    
+    if not part_number or not group_name:
+        return jsonify({
+            'error': 'Missing required parameters: 品番 and 在庫管理グループ名称'
+        }), 400
+    
+    try:
+        # Query the database for matching records
+        records = MgtThreshHold.query.filter(
+            MgtThreshHold.品番 == part_number,
+            MgtThreshHold.在庫管理グループ名称 == group_name
+        ).all()
+        
+        if not records:
+            return jsonify({
+                'error': 'No records found for the specified parameters'
+            }), 404
+        
+        # Convert records to dictionaries
+        response = [record.to_dict() for record in records]
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'An error occurred: {str(e)}'
+        }), 500

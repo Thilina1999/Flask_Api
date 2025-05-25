@@ -26,3 +26,4 @@ class MgtThreshHold(db.Model):
 
     def __repr__(self):
         return f"<MgtThreshHold(品番={self.品番}, 在庫管理グループ名称={self.在庫管理グループ名称})>"
+

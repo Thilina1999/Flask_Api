@@ -32,3 +32,8 @@ def list_get_group_name():
 def list_get_selected_inventory_history():
     if request.method == 'GET': return list_all_Selected_History_controller()
     else: return 'Method is Not Allowed' 
+    
+@app.route("/threshold_data", methods=['GET'])
+def list_get_selected__mgt_threshold():
+    if request.method == 'GET': return get_threshold_controller()
+    else: return 'Method is Not Allowed' 
