@@ -10,8 +10,9 @@ import pandas as pd
 import numpy as np
 import csv
 import sys
-from sqlalchemy import distinct, inspect
+from sqlalchemy import distinct, inspect, func, cast, Date
 from datetime import datetime
+
 
 def list_all_inventory_history_controller():
     inventory_history = InventoryHistory.query.all()
@@ -143,30 +144,51 @@ def list_all_Selected_History_controller():
     column = request.args.get('option')
     start_date = request.args.get('開始日')
     end_date = request.args.get('終了日')
-    
+    time_unit = request.args.get('time_unit')  # e.g., "日"
+
     if not all([assy, column, start_date, end_date]):
         return jsonify({'error': 'Missing required parameters: ASSY品番, option, 開始日, 終了日'}), 400
-    
+
     try:
-        # Parse ISO 8601 format dates directly
+        # Parse ISO 8601 format
         start_datetime = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
         end_datetime = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
-        
-        # Query the database
+
         query = InventoryHistory.query.filter(
             InventoryHistory.ASSY品番 == assy,
             InventoryHistory.更新日時 >= start_datetime,
             InventoryHistory.更新日時 <= end_datetime
-        ).order_by(InventoryHistory.更新日時.asc())
-        
-        # Prepare response
-        response = [{
-            'time': record.更新日時.isoformat() + 'Z',  # Return in ISO format with Z
-            'data': getattr(record, column, None)
-        } for record in query.all()]
-        
+        )
+
+        # Group by day if time_unit is "日"
+        if time_unit == "日单位":
+            results = (
+                query
+                .with_entities(
+                    cast(InventoryHistory.更新日時, Date).label('day'),
+                    func.sum(getattr(InventoryHistory, column)).label('total')
+                )
+                .group_by(cast(InventoryHistory.更新日時, Date))
+                .order_by('day')
+                .all()
+            )
+
+            response = [
+                {
+                    'time': day.isoformat() + 'Z',  # Add 'Z' for UTC format
+                    'data': total
+                }
+                for day, total in results
+            ]
+        else:
+            # Default: return raw records
+            response = [{
+                'time': record.更新日時.isoformat() + 'Z',
+                'data': getattr(record, column, None)
+            } for record in query.order_by(InventoryHistory.更新日時.asc()).all()]
+
         return jsonify(response)
-        
+
     except ValueError as e:
         return jsonify({
             'error': 'Invalid date format. Expected ISO format (e.g., 2024-09-23T18:30:00.000Z)',
