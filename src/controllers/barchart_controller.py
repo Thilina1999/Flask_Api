@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import request, jsonify
 import uuid
 
@@ -144,7 +144,7 @@ def list_all_Selected_History_controller():
     column = request.args.get('option')
     start_date = request.args.get('開始日')
     end_date = request.args.get('終了日')
-    time_unit = request.args.get('time_unit')  # e.g., "日"
+    time_unit = request.args.get('time_unit')  # e.g., "日单位"
 
     if not all([assy, column, start_date, end_date]):
         return jsonify({'error': 'Missing required parameters: ASSY品番, option, 開始日, 終了日'}), 400
@@ -160,8 +160,9 @@ def list_all_Selected_History_controller():
             InventoryHistory.更新日時 <= end_datetime
         )
 
-        # Group by day if time_unit is "日"
+        # Group by day if time_unit is "日单位"
         if time_unit == "日单位":
+            # Get the actual results from the database
             results = (
                 query
                 .with_entities(
@@ -172,14 +173,28 @@ def list_all_Selected_History_controller():
                 .order_by('day')
                 .all()
             )
-
-            response = [
-                {
-                    'time': day.isoformat() + 'Z',  # Add 'Z' for UTC format
+            
+            # Convert results to a dictionary for easier lookup
+            results_dict = {day: total for day, total in results}
+            
+            # Generate complete date range
+            date_range = []
+            current_date = start_datetime.date()
+            end_date_date = end_datetime.date()
+            
+            while current_date <= end_date_date:
+                date_range.append(current_date)
+                current_date += timedelta(days=1)
+            
+            # Build response with 0 for missing days
+            response = []
+            for day in date_range:
+                total = results_dict.get(day, 0)
+                response.append({
+                    'time': day.isoformat(),
                     'data': total
-                }
-                for day, total in results
-            ]
+                })
+                
         else:
             # Default: return raw records
             response = [{
