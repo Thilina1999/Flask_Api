@@ -37,3 +37,8 @@ def list_get_selected_inventory_history():
 def list_get_selected__mgt_threshold():
     if request.method == 'GET': return get_threshold_controller()
     else: return 'Method is Not Allowed' 
+    
+@app.route("/number_list", methods=['GET'])
+def list_get_distinct_assy_number():
+    if request.method == 'GET': return get_distinct_history_assy_number()
+    else: return 'Method is Not Allowed' 

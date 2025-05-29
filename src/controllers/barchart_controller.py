@@ -242,3 +242,14 @@ def get_threshold_controller():
         return jsonify({
             'error': f'An error occurred: {str(e)}'
         }), 500
+        
+def get_distinct_history_assy_number():
+    try:
+        ASSY品番 = db.session.query(distinct(InventoryHistory.ASSY品番)).all()
+
+        ASSY品番_list = [m[0] for m in ASSY品番]
+
+        return jsonify(ASSY品番_list), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
