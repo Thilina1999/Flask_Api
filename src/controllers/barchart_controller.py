@@ -229,9 +229,14 @@ def get_threshold_controller():
         ).all()
         
         if not records:
-            return jsonify({
-                'error': 'No records found for the specified parameters'
-            }), 404
+            # Return a properly structured empty response
+            return jsonify([{
+                "品番": part_number,
+                "在庫管理グループ名称": group_name,
+                "基準在庫上限数": 0,
+                "基準在庫下限数": 0,
+                "基準在庫数": 0
+            }]), 200  # Changed from 202 to 200 since this is a valid response
         
         # Convert records to dictionaries
         response = [record.to_dict() for record in records]
