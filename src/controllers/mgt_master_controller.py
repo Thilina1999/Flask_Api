@@ -13,6 +13,9 @@ import sys
 from sqlalchemy import distinct, inspect, func, cast, Date
 from datetime import datetime
 
+from decimal import Decimal
+
+
 
 def list_all_mgt_master_controller():
     mgt_master = MgtMaster.query.all()
@@ -97,3 +100,58 @@ def list_all_mgtmaster_page_controller():
     }
 
     return jsonify(response)
+
+def update_mgt_master_data_controller():
+    try:
+        data = request.get_json()
+
+        if not isinstance(data, list):
+            return jsonify({'error': 'Invalid data format. Expected a list'}), 400
+
+        updated_records = []
+
+        for item in data:
+            # validate required keys
+            if not item.get('設備グループID') or not item.get('設備機番'):
+                continue
+
+            key = (
+                item['設備グループID'],
+                item['設備機番']
+            )
+
+            # check existing record
+            existing = db.session.get(MgtMaster, key)
+
+            # normalize values (important)
+            try:
+                基準在庫日数 = int(item.get('基準在庫日数', 0))
+                基準在庫管理幅 = Decimal(str(item.get('基準在庫管理幅', 0)))
+            except Exception:
+                return jsonify({'error': f'Invalid numeric value for {key}'}), 400
+
+            if existing:
+                # UPDATE
+                existing.設備グループ名称 = item.get('設備グループ名称')
+                existing.在庫管理グループID = item.get('在庫管理グループID')
+                existing.在庫管理グループ名称 = item.get('在庫管理グループ名称')
+                existing.基準在庫日数 = 基準在庫日数
+                existing.基準在庫管理幅 = 基準在庫管理幅
+
+                updated_records.append({
+                    '設備グループID': key[0],
+                    '設備機番': key[1],
+                    'status': 'updated'
+                })
+
+            else:
+                return jsonify({'error': 'Invalid 設備グループID and 設備機番'}), 400
+
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Update successful'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
