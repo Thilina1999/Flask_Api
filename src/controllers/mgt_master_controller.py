@@ -131,10 +131,11 @@ def update_mgt_master_data_controller():
                 return jsonify({'error': f'Invalid numeric value for {key}'}), 400
 
             if existing:
-                # UPDATE
-                existing.設備グループ名称 = item.get('設備グループ名称')
-                existing.在庫管理グループID = item.get('在庫管理グループID')
-                existing.在庫管理グループ名称 = item.get('在庫管理グループ名称')
+                # UPDATE only changed fields (keep old if not sent)
+                existing.設備グループ名称 = item.get('設備グループ名称', existing.設備グループ名称)
+                existing.在庫管理グループID = item.get('在庫管理グループID', existing.在庫管理グループID)
+                existing.在庫管理グループ名称 = item.get('在庫管理グループ名称', existing.在庫管理グループ名称)
+
                 existing.基準在庫日数 = 基準在庫日数
                 existing.基準在庫管理幅 = 基準在庫管理幅
 
