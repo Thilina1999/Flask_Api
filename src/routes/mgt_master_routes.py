@@ -1,7 +1,7 @@
 from flask import request
 from ...app import app
 
-from ..controllers.mgt_master_controller import ( list_all_mgt_master_controller, insert_mgt_master_data, list_all_mgtmaster_page_controller, update_mgt_master_data_controller )
+from ..controllers.mgt_master_controller import ( list_all_mgt_master_controller, insert_mgt_master_data, list_all_mgtmaster_page_controller, update_mgt_master_data_controller, add_mgt_master_data_controller, delete_mgt_master_data_controller )
 
 @app.route("/mgt_master", methods=['GET'])
 def list_mgt_master_data():
@@ -21,4 +21,14 @@ def list_get_mgt_master_paginate():
 @app.route("/update_mgt_master", methods=['POST'])
 def list_mgt_master_update():
     if request.method == 'POST': return update_mgt_master_data_controller()
+    else: return 'Method is Not Allowed'
+    
+@app.route("/add_mgt_master", methods=['POST'])
+def list_mgt_master_add():
+    if request.method == 'POST': return add_mgt_master_data_controller()
+    else: return 'Method is Not Allowed'
+    
+@app.route("/delete_mgt_master", methods=['DELETE'])
+def delete_mgt_master_add():
+    if request.method == 'DELETE': return delete_mgt_master_data_controller()
     else: return 'Method is Not Allowed'

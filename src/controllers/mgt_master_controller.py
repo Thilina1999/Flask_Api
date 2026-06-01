@@ -156,3 +156,110 @@ def update_mgt_master_data_controller():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+    
+def add_mgt_master_data_controller():
+    try:
+        data = request.get_json()
+
+        if not isinstance(data, dict):
+            return jsonify({
+                'error': 'Invalid data format. Expected object'
+            }), 400
+
+        # Required fields
+        required_fields = [
+            '設備グループID',
+            '設備機番'
+        ]
+
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({
+                    'error': f'Missing required field: {field}'
+                }), 400
+
+        key = (
+            data['設備グループID'],
+            data['設備機番']
+        )
+
+        # Check duplicate
+        existing = db.session.get(MgtMaster, key)
+
+        if existing:
+            return jsonify({
+                'error': 'Record already exists'
+            }), 400
+
+        # Numeric conversion
+        try:
+            基準在庫日数 = int(data.get('基準在庫日数', 0))
+            基準在庫管理幅 = Decimal(
+                str(data.get('基準在庫管理幅', 0))
+            )
+        except Exception:
+            return jsonify({
+                'error': 'Invalid numeric values'
+            }), 400
+
+        # Create new record
+        new_record = MgtMaster(
+            設備グループID=data.get('設備グループID'),
+            設備機番=data.get('設備機番'),
+            設備グループ名称=data.get('設備グループ名称'),
+            在庫管理グループID=data.get('在庫管理グループID'),
+            在庫管理グループ名称=data.get('在庫管理グループ名称'),
+            基準在庫日数=基準在庫日数,
+            基準在庫管理幅=基準在庫管理幅
+        )
+
+        db.session.add(new_record)
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Record added successfully',
+            'data': new_record.to_dict()
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+
+        return jsonify({
+            'error': str(e)
+        }), 500
+        
+        
+def delete_mgt_master_data_controller():
+    try:
+        data = request.get_json()
+
+        if not isinstance(data, list):
+            return jsonify({'error': 'Expected list of keys'}), 400
+
+        deleted = []
+
+        for item in data:
+            if not isinstance(item, str):
+                continue
+
+            try:
+                設備グループID, 設備機番 = item.split('_', 1)
+            except ValueError:
+                continue
+
+            existing = db.session.get(MgtMaster, (設備グループID, 設備機番))
+
+            if existing:
+                db.session.delete(existing)
+                deleted.append(item)
+
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Delete successful',
+            'deleted': deleted
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
